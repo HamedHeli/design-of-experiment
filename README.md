@@ -23,6 +23,7 @@ carries over.
 
 ```mermaid
 flowchart LR
+    BA["Basics<br/>variance · SD vs SE · pooled vs Welch"]
     I["00 Introduction<br/>comparative · controlled · randomized"]
     subgraph A["Part I: Analysis (ch. 2–6)"]
         LM["01 Linear models<br/>least squares · ANOVA · F tests · Box-Cox"]
@@ -45,6 +46,9 @@ flowchart LR
         VR["12 ANCOVA · CUPED · CUPAC<br/>covariate adjustment for A/B tests"]
     end
 
+    BA -- "every test is estimate / SE" --> LM
+    BA -- "pooled variance = MS(Residual)" --> CRD
+    BA -- "Var(Y − θX) = Var(Y)(1 − ρ²)" --> VR
     I -- "every analysis is a linear model" --> LM
     I -- "randomization, blocking, replication" --> CM
     LM -- "a factor = dummy columns" --> CRD
@@ -63,6 +67,7 @@ flowchart LR
     RBD -- "block at design vs adjust at analysis" --> VR
     SP -- "cluster-randomized A/B tests" --> VR
 
+    click BA "basics-variance-and-standard-errors/" "Basics"
     click I "00-introduction-and-principles/" "Introduction"
     click LM "01-linear-models/" "Linear models"
     click CRD "02-completely-randomized-designs/" "Completely randomized designs"
@@ -78,12 +83,16 @@ flowchart LR
     click VR "12-variance-reduction-ancova-cuped-cupac/" "ANCOVA, CUPED, CUPAC"
 ```
 
+New to the statistics? Start with [Basics](basics-variance-and-standard-errors/): variance vs standard deviation
+vs standard error, why variances add when you subtract, and pooled vs Welch standard errors.
+
 If the nodes are not clickable in your viewer (GitHub sometimes disables Mermaid links), use the table below.
 
 ## Topics, chapters and code
 
 | Topic folder | Chapter (notes) | Methods explained | Code in this repo |
 | --- | --- | --- | --- |
+| [Basics: variance, SD, SE](basics-variance-and-standard-errors/) | used throughout | variance rules, SD vs SE, n − 1, variance of a difference, pooled vs Welch, paired, contrasts, proportions, % lift | [`basics.py`](basics-variance-and-standard-errors/basics.py) |
 | [00 Introduction and principles](00-introduction-and-principles/) | 1 | features of a designed experiment, units, factors, levels, replication; historical examples | [`observational_vs_randomized.py`](00-introduction-and-principles/observational_vs_randomized.py) |
 | [01 Linear models](01-linear-models/) | 2 | least squares, ANOVA, t and F tests, extra sum of squares, prediction intervals, Box-Cox, residuals | [`linear_model.py`](01-linear-models/linear_model.py) |
 | [02 Completely randomized designs](02-completely-randomized-designs/) | 3 | one-way ANOVA, three regression codings, contrasts, orthogonal polynomial contrasts | [`crd.py`](02-completely-randomized-designs/crd.py) |
@@ -136,7 +145,7 @@ Each folder lists its own gaps. Four themes recur often enough to plan study aro
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python 05-two-level-factorials/two_level.py                 # any file runs on its own and prints its results
-python -m pytest -q                                          # 24 checks against statsmodels, scipy, enumeration and closed forms
+python -m pytest -q                                          # 27 checks against statsmodels, scipy, enumeration and closed forms
 ```
 
 Every script finishes in a few seconds on a laptop CPU except `cupac.py` (about 25 s: it fits gradient-boosted
@@ -146,6 +155,7 @@ trees). Results quoted in the topic READMEs come from these scripts with their f
 
 ```
 .
+├── basics-variance-and-standard-errors/     start here: SD vs SE, variance of a difference, pooling
 ├── 00-introduction-and-principles/          each folder: README.md + one or more runnable .py files
 ├── 01-linear-models/
 ├── 02-completely-randomized-designs/

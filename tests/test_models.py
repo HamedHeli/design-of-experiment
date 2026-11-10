@@ -314,3 +314,40 @@ def test_cupac_crossfit_beats_cuped_and_stays_unbiased():
     # null effect: |delta| within 3 se
     d, se, _, _ = m.cuped_test(y, f, t)
     assert abs(d) < 3 * se
+
+
+# basics -------------------------------------------------------------------------------
+def test_basics_match_scipy():
+    m = load("basics-variance-and-standard-errors", "basics")
+    rng = np.random.default_rng(21)
+    a, b = rng.normal(0, 1, 9), rng.normal(0.5, 2, 14)
+    p, w = m.pooled_two_sample(a, b), m.welch_two_sample(a, b)
+    assert np.isclose(p["p"], stats.ttest_ind(a, b).pvalue)
+    assert np.isclose(w["p"], stats.ttest_ind(a, b, equal_var=False).pvalue)
+    c = rng.normal(0, 1, 9)
+    assert np.isclose(m.paired(a, c)["p"], stats.ttest_rel(c, a).pvalue)
+    assert np.isclose(m.se_mean(a), stats.sem(a))
+
+
+def test_pooled_variance_is_anova_mse_and_contrast_se():
+    m = load("basics-variance-and-standard-errors", "basics")
+    crd = load("02-completely-randomized-designs", "crd")
+    rng = np.random.default_rng(22)
+    g = np.repeat(np.arange(3), [4, 6, 5])
+    y = rng.normal(size=len(g))
+    an = crd.one_way_anova(y, g)
+    groups = [(np.sum(g == k), m.sample_var(y[g == k])) for k in range(3)]
+    c = np.array([1.0, -0.5, -0.5])
+    assert np.isclose(m.contrast_se(groups, c), crd.contrast(an, c)["se"])
+
+
+def test_variance_of_difference_and_lift_by_simulation():
+    m = load("basics-variance-and-standard-errors", "basics")
+    rng = np.random.default_rng(23)
+    lifts, ses = [], []
+    for _ in range(2000):
+        yT, yC = rng.exponential(11, 400), rng.exponential(10, 400)
+        l, s = m.relative_lift(yT, yC)
+        lifts.append(l)
+        ses.append(s)
+    assert abs(np.mean(ses) / np.std(lifts) - 1) < 0.08
