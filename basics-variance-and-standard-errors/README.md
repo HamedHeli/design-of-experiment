@@ -7,6 +7,11 @@
 `t = estimate / standard error`, and every design choice (blocking, pairing, replication, CUPED) is a way to
 make that standard error smaller.
 
+**Worked examples by hand:** [worked-examples.md](worked-examples.md) does every calculation below with
+numbers small enough for pencil and paper: SD vs SE, a difference of means (pooled and Welch), paired data,
+a contrast, two proportions, a percentage lift, the design effect, and a cluster-robust SE step by step
+(including why it divides by n² and where the G/(G − 1) comes from).
+
 ## Cheat sheet
 
 | Quantity | Formula | Describes | Shrinks with more data? |
@@ -98,6 +103,8 @@ A/B results are often reported as `ȳ_T/ȳ_C − 1`. A ratio's variance comes fr
 - Halving the SE needs 4× the data, or a design that removes variance (blocking, pairing, CUPED).
 
 ## Code in this folder
+
+[`worked_examples.py`](worked_examples.py) checks every number in [worked-examples.md](worked-examples.md).
 
 [`basics.py`](basics.py): sample variance, SE of a mean, pooled and Welch two-sample t, paired t, contrast SE
 (pooled or not), the design effect for clustered data, two-proportion CI and z test, delta-method SE of a percentage lift, each checked by

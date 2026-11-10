@@ -84,7 +84,8 @@ flowchart LR
 ```
 
 New to the statistics? Start with [Basics](basics-variance-and-standard-errors/): variance vs standard deviation
-vs standard error, why variances add when you subtract, and pooled vs Welch standard errors.
+vs standard error, why variances add when you subtract, and pooled vs Welch standard errors, with
+[hand-calculated worked examples](basics-variance-and-standard-errors/worked-examples.md).
 
 If the nodes are not clickable in your viewer (GitHub sometimes disables Mermaid links), use the table below.
 
@@ -145,7 +146,7 @@ Each folder lists its own gaps. Four themes recur often enough to plan study aro
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python 05-two-level-factorials/two_level.py                 # any file runs on its own and prints its results
-python -m pytest -q                                          # 30 checks against statsmodels, scipy, enumeration and closed forms
+python -m pytest -q                                          # 31 checks against statsmodels, scipy, enumeration and closed forms
 ```
 
 Every script finishes in a few seconds on a laptop CPU except `robust_se.py` (~20 s), `cupac.py` (~25 s: it fits

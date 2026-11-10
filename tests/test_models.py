@@ -385,3 +385,18 @@ def test_cluster_by_user_matches_delta_method():
     se_cr = np.sqrt(r.cluster_cov(X, e, uid, "CR0")[0][1, 1])
     _, se_d = m.delta_method_ratio_se(clicks, uid, t)
     assert abs(se_cr / se_d - 1) < 0.01
+
+
+def test_worked_examples_numbers():
+    w = load("basics-variance-and-standard-errors", "worked_examples")
+    r = w.ex1_mean_sd_se()
+    assert (r["mean"], r["ss"], r["var"], r["var_n"]) == (8, 40, 10, 8) and np.isclose(r["se"], np.sqrt(2))
+    r = w.ex3_two_groups()
+    assert np.isclose(r["pooled"]["sp"] ** 2, 15.2) and np.isclose(r["welch"]["se"], np.sqrt(2 + 18.666666 / 7), atol=1e-4)
+    assert np.isclose(w.ex4_paired()["var_d"], 0.7)
+    r = w.ex5_contrast()
+    assert (r["est"], r["se"], r["t"]) == (6, 1.5, 4)
+    assert np.isclose(w.ex7_lift()["var"], 0.000841)
+    r = w.ex9_cluster_robust()
+    assert np.allclose([r["se_CR0"] ** 2, r["se_CR1"] ** 2, r["se_CR2"] ** 2, r["se_means"] ** 2],
+                       [2.5, 2.5 * 4 / 3 * 7 / 6, 5.0, 5.0])
