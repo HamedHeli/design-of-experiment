@@ -1,0 +1,11 @@
+# Every method is implemented in NumPy + SciPy (distributions only)
+numpy>=2.0
+scipy>=1.11
+
+# CUPAC (12): gradient-boosted trees for the learned covariate
+scikit-learn>=1.3
+
+# Tests: reference implementations to check against
+statsmodels>=0.14
+pandas>=2.0
+pytest>=8.0
