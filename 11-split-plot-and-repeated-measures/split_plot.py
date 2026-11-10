@@ -31,8 +31,14 @@ Run:  python 11-split-plot-and-repeated-measures/split_plot.py
 
 from __future__ import annotations
 
+import os
+import sys
+
 import numpy as np
 from scipy import stats
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "01-linear-models"))
+from robust_se import cluster_cov, ols_resid  # noqa: E402
 
 
 def simulate(rng, b, w, s, alpha, gamma, sigma_w, sigma, inter=None):
@@ -77,6 +83,38 @@ def naive_anova_p_W(Y):
     return stats.f.sf(F, an["W"]["df"], df_res)
 
 
+def regression_w_contrast(Y, cluster_robust=True):
+    """Regression at the sub-plot level: y ~ block + W + S, coefficient for W level 2 vs level 1.
+    With cluster_robust, the SE is CR2 clustered on whole plots and the t test uses G - 1 DF;
+    otherwise the classic OLS SE (which treats every sub-plot as independent)."""
+    b, w, s = Y.shape
+    blk, wl, sl = np.meshgrid(np.arange(b), np.arange(w), np.arange(s), indexing="ij")
+    blk, wl, sl, y = blk.ravel(), wl.ravel(), sl.ravel(), Y.ravel()
+    X = np.column_stack([np.ones_like(y)] + [(blk == k) * 1.0 for k in range(1, b)]
+                        + [(wl == k) * 1.0 for k in range(1, w)] + [(sl == k) * 1.0 for k in range(1, s)])
+    j = b                                                       # first W dummy
+    beta, e = ols_resid(X, y)
+    if cluster_robust:
+        V, G = cluster_cov(X, e, blk * w + wl, "CR2")       # cluster = whole plot
+        df = G - 1
+    else:
+        n, k = X.shape
+        V = np.linalg.inv(X.T @ X) * (e @ e) / (n - k)
+        df = n - k
+    t = beta[j] / np.sqrt(V[j, j])
+    return float(beta[j]), float(np.sqrt(V[j, j])), float(2 * stats.t.sf(abs(t), df))
+
+
+def whole_plot_t(Y):
+    """The split-plot answer for the same contrast: SE from MS(whole-plot error) on (b-1)(w-1) DF."""
+    b, w, s = Y.shape
+    an = split_plot_anova(Y)
+    m = Y.mean((0, 2))
+    se = np.sqrt(2 * an["WPerr"]["ms"] / (b * s))
+    t = (m[1] - m[0]) / se
+    return float(m[1] - m[0]), float(se), float(2 * stats.t.sf(abs(t), an["WPerr"]["df"]))
+
+
 def demo():
     rng = np.random.default_rng(13)
     b, w, s = 4, 3, 4
@@ -98,6 +136,15 @@ def demo():
         rej_naive += naive_anova_p_W(Y0) < 0.05
     print(f"type I error for W at 5% (no W effect): split-plot analysis {rej_ok/reps:.3f}, "
           f"naive single-error analysis {rej_naive/reps:.3f}")
+
+    # the regression view: one W contrast, classic OLS SE vs cluster-robust SE clustered on whole plots
+    rej = {"split-plot t (WP error)": 0, "OLS, classic SE": 0, "OLS, CR2 SE by whole plot": 0}
+    for _ in range(reps):
+        Y0 = simulate(rng, b, w, s, alpha=[0, 0, 0], gamma=[0, 0.5, 1.0, 1.5], sigma_w=1.5, sigma=0.5)
+        rej["split-plot t (WP error)"] += whole_plot_t(Y0)[2] < 0.05
+        rej["OLS, classic SE"] += regression_w_contrast(Y0, cluster_robust=False)[2] < 0.05
+        rej["OLS, CR2 SE by whole plot"] += regression_w_contrast(Y0, cluster_robust=True)[2] < 0.05
+    print("type I error for the W2 - W1 contrast: " + ", ".join(f"{k} {v/reps:.3f}" for k, v in rej.items()))
 
 
 if __name__ == "__main__":

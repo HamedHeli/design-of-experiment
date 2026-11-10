@@ -94,7 +94,7 @@ If the nodes are not clickable in your viewer (GitHub sometimes disables Mermaid
 | --- | --- | --- | --- |
 | [Basics: variance, SD, SE](basics-variance-and-standard-errors/) | used throughout | variance rules, SD vs SE, n − 1, variance of a difference, pooled vs Welch, paired, contrasts, proportions, % lift | [`basics.py`](basics-variance-and-standard-errors/basics.py) |
 | [00 Introduction and principles](00-introduction-and-principles/) | 1 | features of a designed experiment, units, factors, levels, replication; historical examples | [`observational_vs_randomized.py`](00-introduction-and-principles/observational_vs_randomized.py) |
-| [01 Linear models](01-linear-models/) | 2 | least squares, ANOVA, t and F tests, extra sum of squares, prediction intervals, Box-Cox, residuals | [`linear_model.py`](01-linear-models/linear_model.py) |
+| [01 Linear models](01-linear-models/) | 2 | least squares, ANOVA, t and F tests, extra sum of squares, prediction intervals, Box-Cox, residuals, HC and cluster-robust SEs | [`linear_model.py`](01-linear-models/linear_model.py), [`robust_se.py`](01-linear-models/robust_se.py) |
 | [02 Completely randomized designs](02-completely-randomized-designs/) | 3 | one-way ANOVA, three regression codings, contrasts, orthogonal polynomial contrasts | [`crd.py`](02-completely-randomized-designs/crd.py) |
 | [03 Randomized blocks and 2-way factorials](03-randomized-blocks-and-two-way/) | 4 | RBD, balance, relative efficiency, Tukey non-additivity, replicated 2-way factorial | [`rbd.py`](03-randomized-blocks-and-two-way/rbd.py) |
 | [04 Factorial experiments](04-factorial-experiments/) | 5 | interaction effects, multi-way ANOVA, 1-DF main and interaction contrasts, polynomial model | [`factorial.py`](04-factorial-experiments/factorial.py) |
@@ -105,7 +105,7 @@ If the nodes are not clickable in your viewer (GitHub sometimes disables Mermaid
 | [09 Randomization, blocking, replication](09-randomization-blocking-replication/) | 10 | experimental vs observational, randomization tests, replication, auxiliary variables | [`randomization.py`](09-randomization-blocking-replication/randomization.py) |
 | [10 Random effects](10-random-effects/) | 11 | fixed vs random, expected mean squares, variance components, prediction | [`random_effects.py`](10-random-effects/random_effects.py) |
 | [11 Split-plot and repeated measures](11-split-plot-and-repeated-measures/) | 12 | whole-plot and sub-plot factors, two error strata, repeated measures | [`split_plot.py`](11-split-plot-and-repeated-measures/split_plot.py) |
-| [12 ANCOVA, CUPED, CUPAC](12-variance-reduction-ancova-cuped-cupac/) | beyond the notes (10.6) | ANCOVA, Lin's estimator, CUPED, CUPAC with historical and cross-fitted models | [`ancova.py`](12-variance-reduction-ancova-cuped-cupac/ancova.py), [`cuped.py`](12-variance-reduction-ancova-cuped-cupac/cuped.py), [`cupac.py`](12-variance-reduction-ancova-cuped-cupac/cupac.py) |
+| [12 ANCOVA, CUPED, CUPAC](12-variance-reduction-ancova-cuped-cupac/) | beyond the notes (10.6) | ANCOVA, Lin's estimator, CUPED, CUPAC with historical and cross-fitted models, cluster-robust SEs for cluster-randomized and session-level tests | [`ancova.py`](12-variance-reduction-ancova-cuped-cupac/ancova.py), [`cuped.py`](12-variance-reduction-ancova-cuped-cupac/cuped.py), [`cupac.py`](12-variance-reduction-ancova-cuped-cupac/cupac.py), [`cluster_randomized.py`](12-variance-reduction-ancova-cuped-cupac/cluster_randomized.py) |
 
 Chapter 13 of the notes holds exercise solutions and has no folder.
 
@@ -145,11 +145,11 @@ Each folder lists its own gaps. Four themes recur often enough to plan study aro
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python 05-two-level-factorials/two_level.py                 # any file runs on its own and prints its results
-python -m pytest -q                                          # 27 checks against statsmodels, scipy, enumeration and closed forms
+python -m pytest -q                                          # 30 checks against statsmodels, scipy, enumeration and closed forms
 ```
 
-Every script finishes in a few seconds on a laptop CPU except `cupac.py` (about 25 s: it fits gradient-boosted
-trees). Results quoted in the topic READMEs come from these scripts with their fixed random seeds.
+Every script finishes in a few seconds on a laptop CPU except `robust_se.py` (~20 s), `cupac.py` (~25 s: it fits
+gradient-boosted trees) and `cluster_randomized.py` (~50 s). Results quoted in the topic READMEs come from these scripts with their fixed random seeds.
 
 ## Layout
 

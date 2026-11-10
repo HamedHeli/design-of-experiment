@@ -69,6 +69,16 @@ The unit-to-unit variation sits in the covariance and cancels. Analysing paired 
 samples throws that away (in the demo the SE is 4× too large and a real effect becomes p = 0.56). Pairing is
 the simplest block design ([03](../03-randomized-blocks-and-two-way/)).
 
+### Clustered observations: the design effect
+
+If the `n` observations come in clusters of size `m` (sessions within users, users within cities, pupils
+within schools) with intra-cluster correlation `ρ`, they are not `n` independent pieces of information. The
+variance of a mean, or of a treatment effect assigned to whole clusters, is inflated by the **design effect**
+`1 + (m − 1)ρ`. Even `ρ = 0.1` with `m = 25` more than triples the variance, so `s/√n` understates the SE by a
+factor of about 1.8. The fix is a **cluster-robust standard error**, clustered on the unit that was
+randomized: see [`robust_se.py`](../01-linear-models/robust_se.py) and the A/B-test examples in
+[12](../12-variance-reduction-ancova-cuped-cupac/).
+
 ### Proportions
 
 For a 0/1 outcome, `Var(Y) = p(1 − p)`, so `SE(p̂) = √(p(1 − p)/n)`; it is largest at `p = ½`. For the
@@ -90,7 +100,7 @@ A/B results are often reported as `ȳ_T/ȳ_C − 1`. A ratio's variance comes fr
 ## Code in this folder
 
 [`basics.py`](basics.py): sample variance, SE of a mean, pooled and Welch two-sample t, paired t, contrast SE
-(pooled or not), two-proportion CI and z test, delta-method SE of a percentage lift, each checked by
+(pooled or not), the design effect for clustered data, two-proportion CI and z test, delta-method SE of a percentage lift, each checked by
 simulation.
 
 ```bash
@@ -107,8 +117,9 @@ python basics-variance-and-standard-errors/basics.py
 | equal SDs, 15 + 15: pooled vs Welch SE | 0.750 vs 0.750 (28 vs 27.7 DF) |
 | no true difference, n = 8 (SD 4) vs n = 40 (SD 1): type I error | pooled **0.348**, Welch 0.052 |
 | 12 units measured twice: paired vs "independent" SE | 0.37 (p = 0.036) vs 1.48 (p = 0.56) |
+| 40 clusters of 25, ICC 0.1: true SE of the mean vs naive s/√n | 0.059 vs 0.032; variance ratio 3.50 vs design effect 3.40 |
 | conversion 5.6% vs 5.0%, 10 000 each | diff 0.0060, SE 0.0032, z = 1.89, p = 0.058 |
-| revenue lift 6.0%: delta-method vs bootstrap SE | 2.12 vs 2.13 percentage points |
+| revenue lift 5.8%: delta-method vs bootstrap SE | 2.10 vs 2.08 percentage points |
 
 The tests check the t tests against `scipy.stats`, and that the pooled contrast SE equals the one from the
 ANOVA in [02](../02-completely-randomized-designs/).
@@ -118,9 +129,6 @@ ANOVA in [02](../02-completely-randomized-designs/).
 **What this folder leaves out**
 
 - **Unequal variance in ANOVA** beyond two groups: Welch's ANOVA, Games–Howell comparisons.
-- **Clustered data.** If units are grouped (users within cities) and randomized by group, the SE must account
-  for the intra-cluster correlation: design effect `1 + (m − 1)ρ`. Ignoring it is the split-plot mistake of
-  [11](../11-split-plot-and-repeated-measures/).
 - **Heavy tails.** The SE formulas are fine, but the normal approximation for the CI can be slow to kick in for
   revenue-like metrics; trimming, winsorizing or the bootstrap help.
 - **Standard error of a standard deviation** (≈ `σ/√(2(n−1))` for normal data), useful in variance-component

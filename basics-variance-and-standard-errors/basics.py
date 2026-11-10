@@ -34,6 +34,11 @@ Proportions (Bernoulli outcomes, e.g. conversion)
     Difference: SE = sqrt(p1(1-p1)/n1 + p2(1-p2)/n2) for the CI; under H0 p1 = p2 the z test uses the
     pooled phat = (x1 + x2)/(n1 + n2): SE0 = sqrt(phat(1 - phat)(1/n1 + 1/n2)).
 
+Clustered observations (design effect)
+    n observations in clusters of size m with intra-cluster correlation rho: the variance of a mean (or of a
+    cluster-level treatment effect) is inflated by 1 + (m - 1) rho, so the effective sample size is
+    n / (1 + (m - 1) rho). Fix the SE with cluster-robust standard errors (01-linear-models/robust_se.py).
+
 Relative (percentage) lift, delta method
     L = ybar_T / ybar_C - 1.  Var(L) ~ (1/mu_C^2) [Var(ybar_T) + (mu_T/mu_C)^2 Var(ybar_C)].
 
@@ -113,6 +118,10 @@ def relative_lift(yT, yC):
     return lift, se
 
 
+def design_effect(m, rho):
+    return 1 + (m - 1) * rho
+
+
 def demo():
     rng = np.random.default_rng(20)
     sigma, n = 2.0, 25
@@ -168,7 +177,18 @@ def demo():
     print(f"contrast (1, 1, -1, -1) with n = 6 per group: SE = {contrast_se(groups, c):.3f} "
           f"= s_p sqrt(4/6)")
 
-    # 6. proportions and lift
+    # 6. clustered data: the naive SE of a mean ignores the design effect
+    G, mm, rho = 40, 25, 0.1
+    means, naive = [], []
+    for _ in range(5000):
+        y = (rng.normal(0, np.sqrt(rho), G)[:, None] + rng.normal(0, np.sqrt(1 - rho), (G, mm))).ravel()
+        means.append(y.mean())
+        naive.append(se_mean(y))
+    print(f"{G} clusters of {mm}, ICC {rho}: true SE of the mean {np.std(means):.4f}, naive s/sqrt(n) "
+          f"{np.mean(naive):.4f}; ratio^2 {(np.std(means)/np.mean(naive))**2:.2f} vs design effect "
+          f"{design_effect(mm, rho):.2f}")
+
+    # 7. proportions and lift
     pr2 = two_proportions(560, 10000, 500, 10000)
     print(f"conversion 5.6% vs 5.0%, 10000 each: diff {pr2['diff']:.4f}, SE(CI) {pr2['se_ci']:.4f}, "
           f"SE(test, pooled p) {pr2['se_test']:.4f}, z = {pr2['z']:.2f}, p = {pr2['p']:.3f}")

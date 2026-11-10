@@ -351,3 +351,37 @@ def test_variance_of_difference_and_lift_by_simulation():
         lifts.append(l)
         ses.append(s)
     assert abs(np.mean(ses) / np.std(lifts) - 1) < 0.08
+
+
+# cluster-robust standard errors -------------------------------------------------------
+def test_hc_and_cluster_cov_match_statsmodels():
+    sm = pytest.importorskip("statsmodels.api")
+    m = load("01-linear-models", "robust_se")
+    rng = np.random.default_rng(26)
+    X, y, cl = m.simulate_clustered(rng, 15, 8, 0.3, tau=0.2)
+    X = np.column_stack([X, rng.normal(size=len(y))])
+    beta, e = m.ols_resid(X, y)
+    assert np.allclose(m.hc_cov(X, e, "HC1"), sm.OLS(y, X).fit(cov_type="HC1").cov_params())
+    assert np.allclose(m.hc_cov(X, e, "HC2"), sm.OLS(y, X).fit(cov_type="HC2").cov_params())
+    ref = sm.OLS(y, X).fit(cov_type="cluster", cov_kwds={"groups": cl}).cov_params()
+    assert np.allclose(m.cluster_cov(X, e, cl, "CR1")[0], ref)
+
+
+def test_cr2_with_singleton_clusters_is_hc2():
+    m = load("01-linear-models", "robust_se")
+    rng = np.random.default_rng(27)
+    X = np.column_stack([np.ones(30), rng.normal(size=(30, 2))])
+    y = rng.normal(size=30)
+    _, e = m.ols_resid(X, y)
+    assert np.allclose(m.cluster_cov(X, e, np.arange(30), "CR2")[0], m.hc_cov(X, e, "HC2"))
+
+
+def test_cluster_by_user_matches_delta_method():
+    m = load("12-variance-reduction-ancova-cuped-cupac", "cluster_randomized")
+    r = load("01-linear-models", "robust_se")
+    clicks, t, uid = m.simulate_sessions(np.random.default_rng(28))
+    X = np.column_stack([np.ones_like(clicks), t])
+    _, e = r.ols_resid(X, clicks)
+    se_cr = np.sqrt(r.cluster_cov(X, e, uid, "CR0")[0][1, 1])
+    _, se_d = m.delta_method_ratio_se(clicks, uid, t)
+    assert abs(se_cr / se_d - 1) < 0.01

@@ -52,10 +52,20 @@ A subject is a whole plot; the between-subject treatment is W; time is S. The sp
 equal correlation between any two times (compound symmetry). Measurements closer in time are usually more
 correlated, which needs a sphericity correction or a mixed model with a time-series covariance.
 
+### The regression view: cluster-robust SEs
+
+Fitting `y ~ block + W + S` by OLS at the sub-plot level and using the usual SE repeats the naive mistake.
+The sub-plots in a whole plot share `η`, so the whole plot is a cluster; a cluster-robust SE clustered on whole
+plots ([`robust_se.py`](../01-linear-models/robust_se.py)) fixes most of it without writing down the EMS. With
+only `bw` whole plots it is approximate (slightly liberal here with 12 clusters), so when the design is a clean
+split plot the two-stratum ANOVA is the exact answer; the cluster-robust SE earns its keep when the data are
+unbalanced or the model has covariates.
+
 ## Code in this folder
 
-[`split_plot.py`](split_plot.py): simulation of a split plot in blocks, the two-stratum ANOVA, and a type I
-error comparison against the naive single-error analysis.
+[`split_plot.py`](split_plot.py): simulation of a split plot in blocks, the two-stratum ANOVA, a type I
+error comparison against the naive single-error analysis, and the same comparison for a regression with
+classic vs cluster-robust (CR2, clustered by whole plot) standard errors.
 
 ```bash
 python 11-split-plot-and-repeated-measures/split_plot.py
@@ -66,6 +76,7 @@ python 11-split-plot-and-repeated-measures/split_plot.py
 | F for W (vs whole-plot error, 6 DF) | 3.76, p = 0.087 |
 | F for S and W×S (vs sub-plot error, 27 DF) | 39.4 (p = 5e-10) and 2.33 (p = 0.061) |
 | type I error for W at 5%, no W effect | split-plot analysis **0.048**, naive analysis **0.542** |
+| type I error for the W₂ − W₁ contrast | whole-plot-error t 0.048, OLS classic SE **0.420**, OLS CR2 by whole plot 0.074 |
 
 ## Knowledge gap
 

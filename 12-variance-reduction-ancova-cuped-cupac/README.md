@@ -87,18 +87,36 @@ It stays unbiased as long as:
 
 Because θ is still estimated on top, a useless model gives θ ≈ 0 and you are back to DiM, not worse.
 
+## Cluster-robust standard errors in A/B tests
+
+The CUPED formulas above assume one row per randomized unit. Two common setups break that, and the
+standard error must then be **clustered on the unit of randomization** ([`robust_se.py`](../01-linear-models/robust_se.py)):
+
+1. **Cluster-randomized experiments.** Whole cities, stores or campaigns are assigned (to avoid marketplace
+   interference), outcomes are per user. Users in a city share shocks, so a user-level t test pretends to have
+   thousands of independent units when it has `G` clusters. Use CR2 clustered by city with `t_{G−1}`, or a
+   t test on city means. CUPED still applies: transform each user's metric, then cluster the SE. A pre-period
+   metric that also carries the persistent city effect removes much of the between-city variance.
+2. **Analysis unit finer than randomization unit.** Users are randomized, but "clicks per session" is computed
+   over sessions. Sessions of one user are correlated; cluster by user. For a ratio of means this reproduces
+   the delta-method SE used by experimentation platforms.
+
+When each row *is* a randomized unit (one row per user, user randomization), there is nothing to cluster.
+
 ## Code in this folder
 
 | File | What it does |
 | --- | --- |
 | [`ancova.py`](ancova.py) | DiM, change score, ANCOVA, Lin's interacted ANCOVA with HC2 SEs; a variance table over ρ; CI coverage; the post-treatment-covariate bias |
 | [`cuped.py`](cuped.py) | θ, the CUPED transform, Welch CI, sample-size formula; a simulated sessions-per-user A/B test; ANCOVA equivalence; power over 1000 experiments |
+| [`cluster_randomized.py`](cluster_randomized.py) | city-randomized test with naive vs CR2 vs city-means inference, with and without CUPED; session-level metric with user randomization: naive vs cluster-by-user vs delta method |
 | [`cupac.py`](cupac.py) | non-linear user features, a gradient-boosted model trained on a historical period and a 5-fold cross-fitted model, CUPED vs CUPAC over 1000 experiments |
 
 ```bash
 python 12-variance-reduction-ancova-cuped-cupac/ancova.py    # ~5 s
 python 12-variance-reduction-ancova-cuped-cupac/cuped.py     # ~3 s
 python 12-variance-reduction-ancova-cuped-cupac/cupac.py     # ~25 s
+python 12-variance-reduction-ancova-cuped-cupac/cluster_randomized.py   # ~50 s
 ```
 
 **ANCOVA** (n = 200, 4000 simulated experiments, sd of the estimate of τ):
@@ -135,6 +153,14 @@ covariate gives bias +0.000; adjusting for a post-treatment mediator gives **−
 
 The 5-fold cross-fitted model reaches the same corr² (0.77) without any historical data.
 
+**Cluster-robust SEs** (1000 simulated experiments with no true effect, nominal 5%):
+
+| Setup | naive SE | cluster-robust SE | alternative |
+| --- | --- | --- | --- |
+| 30 cities randomized, ~65 users each, ICC 0.05 | type I **0.322** | CR2 by city **0.062** | city-means t 0.059 |
+| same, after CUPED | 0.103 | CR2 0.058 (SE 0.034 vs 0.094 without CUPED) | 0.055 |
+| 2000 users randomized, clicks per session over ~10 000 sessions | 0.186 (SE 0.015 vs true 0.023) | CR1 by user 0.058 (SE 0.022) | delta method 0.058 (SE 0.022) |
+
 ## Knowledge gap
 
 **What the notes and this folder leave out**
@@ -144,8 +170,8 @@ The 5-fold cross-fitted model reaches the same corr² (0.77) without any histori
 - **Heavy tails.** Capping or winsorizing the metric before CUPED often matters as much as CUPED itself.
 - **Stratification and post-stratification** are CUPED with categorical covariates.
 - **Sequential testing** (always-valid p-values, mSPRT) combined with CUPED.
-- **Cluster-randomized experiments** need covariates at the cluster level and the right error term
-  ([11](../11-split-plot-and-repeated-measures/)).
+- **Very few clusters** (a handful of cities or markets): even CR2 struggles; randomization inference over
+  cluster assignments ([09](../09-randomization-blocking-replication/)) or the wild cluster bootstrap is safer.
 - **Heterogeneous effects:** with Lin's interaction the coefficient on T is the average effect at the
   covariate mean; the interaction coefficients describe how the effect varies, which is exploratory.
 

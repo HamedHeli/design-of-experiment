@@ -52,13 +52,36 @@ picks `λ` by maximizing the profile likelihood, using the scaled transform
 `λ = 1` is no transform, `½` the square root, `0` the log, `−1` the reciprocal. Residual plots (vs fitted, vs
 each `x`, normal Q-Q, vs run order) check what the transform could not fix.
 
+### Robust and cluster-robust standard errors (not in the notes)
+
+The formula `σ²(XᵀX)⁻¹` assumes independent errors with one common variance. The **sandwich** estimator
+`(XᵀX)⁻¹ [XᵀΩ̂X] (XᵀX)⁻¹` drops that assumption:
+
+- **HC** (heteroskedasticity-consistent): `Ω̂` diagonal with `eᵢ²` (HC1 rescales by `n/(n − k)`, HC2 uses
+  `eᵢ²/(1 − hᵢᵢ)`). Use when variances differ but observations are independent.
+- **CR** (cluster-robust): the meat is `Σ_g X_gᵀ e_g e_gᵀ X_g`, allowing any correlation *within* a cluster
+  `g` and independence *between* clusters. CR1 is the Stata / statsmodels default; CR2 (Bell–McCaffrey)
+  corrects the small-sample bias. Test with `t` on `G − 1` DF, because there are only `G` independent
+  clusters.
+
+**When it is appropriate:** cluster on the unit of randomization whenever the analysis unit is finer than it:
+sub-plots within a whole plot ([11](../11-split-plot-and-repeated-measures/)), users within a randomized city,
+sessions within a randomized user ([12](../12-variance-reduction-ancova-cuped-cupac/)). It is *not* needed
+when every row is its own randomized unit (a plain user-level A/B test); there HC or Welch is enough. With few
+clusters (< 30–50) CR1 over-rejects; prefer CR2 with `t_{G−1}`, cluster means, or the exact design-based
+analysis (the split-plot ANOVA) when one exists.
+
 ## Code in this folder
 
 [`linear_model.py`](linear_model.py): QR-based least squares with standard errors, ANOVA table, extra-SS F
 test, CI and PI for prediction, Box-Cox profile with an approximate 95% interval for `λ`.
 
+[`robust_se.py`](robust_se.py): HC0/HC1/HC2 and CR0/CR1/CR2 covariance matrices, `t_{G−1}` inference, and a
+simulation of a cluster-randomized treatment.
+
 ```bash
 python 01-linear-models/linear_model.py
+python 01-linear-models/robust_se.py        # ~20 s
 ```
 
 | Result (saved run) | |
@@ -69,7 +92,20 @@ python 01-linear-models/linear_model.py
 | at `x₁ = x₂ = 0.5`: mean, 95% CI, 95% PI | 11.07, (10.87, 11.27), (10.26, 11.88) |
 | Box-Cox on log-normal data | λ̂ = 0.20, 95% CI (−0.10, 0.50), contains the log |
 
-The tests check every number against `statsmodels`.
+Cluster-randomized treatment, 20 units per cluster, ICC 0.1 (design effect 2.9), 3000 simulations:
+
+| clusters G | true sd of τ̂ | mean SE: classic / HC1 / CR1 / CR2 | 95% coverage: classic / CR1 / CR2 (t_{G−1}) |
+| --- | --- | --- | --- |
+| 10 | 0.248 | 0.140 / 0.140 / 0.219 / 0.232 | 0.734 / 0.924 / **0.940** |
+| 20 | 0.172 | 0.099 / 0.099 / 0.164 / 0.168 | 0.735 / 0.942 / 0.946 |
+| 50 | 0.107 | 0.063 / 0.063 / 0.106 / 0.107 | 0.748 / 0.947 / 0.949 |
+
+HC does not help: the problem is correlation, not unequal variance. When the treatment is instead randomized
+to individual units inside the same clusters, the classic SE is already right (true sd 0.100, classic 0.100,
+CR2 0.099): clustering matters for regressors that are constant, or nearly so, within clusters.
+
+The tests check every number against `statsmodels` (OLS, HC1, HC2 and cluster CR1), and that CR2 with
+one-observation clusters reduces to HC2.
 
 ## Knowledge gap
 
@@ -79,8 +115,10 @@ The tests check every number against `statsmodels`.
   DF and independent of `β̂`. The notes state the results; Seber & Lee, *Linear Regression Analysis*, ch. 3–4
   prove them.
 - **Robustness of the tests.** The F test for means is fairly robust to non-normality with balanced designs,
-  much less to unequal variances with unequal group sizes. Welch-type tests and HC (sandwich) standard
-  errors are the modern fix; HC2 is used in [12](../12-variance-reduction-ancova-cuped-cupac/ancova.py).
+  much less to unequal variances with unequal group sizes. Welch-type tests and HC / CR (sandwich) standard
+  errors are the modern fix, added here in [`robust_se.py`](robust_se.py). Further: the wild cluster bootstrap
+  for very few clusters (Cameron, Gelbach & Miller 2008); Abadie, Athey, Imbens & Wooldridge (2023), "When
+  should you adjust standard errors for clustering?", *QJE*.
 - **Multiple testing.** Testing many coefficients at 5% each inflates false positives; Bonferroni, Holm,
   Tukey HSD and FDR control are not covered.
 - **Leverage and influence** (hat values, Cook's distance) are only touched through residual plots.
