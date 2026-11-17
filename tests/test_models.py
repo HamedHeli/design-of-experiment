@@ -400,3 +400,40 @@ def test_worked_examples_numbers():
     r = w.ex9_cluster_robust()
     assert np.allclose([r["se_CR0"] ** 2, r["se_CR1"] ** 2, r["se_CR2"] ** 2, r["se_means"] ** 2],
                        [2.5, 2.5 * 4 / 3 * 7 / 6, 5.0, 5.0])
+
+
+# 13 -----------------------------------------------------------------------------------
+def test_thompson_prob_b_beats_a_matches_monte_carlo_and_worked_example():
+    m = load("13-adaptive-experiments-bandits", "bandits")
+    w = m.worked_example()
+    pb = m.prob_best([3, 6], [7, 6], np.random.default_rng(30), draws=400_000)[1]
+    assert abs(pb - w["thompson_P_B"]) < 0.005 and abs(w["thompson_P_B"] - 0.815) < 0.001
+    assert np.isclose(w["greedy_P_B"], 0.95)
+    # Thompson's allocation frequency equals P(best | data)
+    rng = np.random.default_rng(31)
+    n, s = np.tile([10.0, 12.0], (100_000, 1)), np.tile([3.0, 6.0], (100_000, 1))
+    assert abs((m.choose_thompson(n, s, 22, rng) == 1).mean() - w["thompson_P_B"]) < 0.01
+
+
+def test_bandit_regret_uniform_closed_form_and_thompson_lower():
+    m = load("13-adaptive-experiments-bandits", "bandits")
+    rng = np.random.default_rng(32)
+    p, T = np.array([0.1, 0.2, 0.3]), 2000
+    _, _, reg_u, _ = m.simulate(m.choose_uniform, p, T, 300, rng)
+    assert abs(reg_u.mean() - T * (p.max() - p.mean())) < 4 * reg_u.std() / np.sqrt(300)
+    _, _, reg_t, _ = m.simulate(m.choose_thompson, p, T, 300, rng)
+    _, _, reg_g, _ = m.simulate(m.choose_greedy, p, T, 300, rng, eps=0.0)
+    assert reg_t.mean() < 0.25 * reg_u.mean() and reg_t.mean() < reg_g.mean()
+
+
+def test_adaptive_allocation_biases_arm_means_downward():
+    m = load("13-adaptive-experiments-bandits", "bandits")
+    rng = np.random.default_rng(33)
+    p = np.array([0.3, 0.5])
+    err = {}
+    for name, pol in [("uniform", m.choose_uniform), ("thompson", m.choose_thompson)]:
+        n, s, _, _ = m.simulate(pol, p, 300, 2000, rng)
+        e = s[:, 0] / np.maximum(n[:, 0], 1) - p[0]
+        err[name] = (e.mean(), e.std() / np.sqrt(len(e)))
+    assert abs(err["uniform"][0]) < 4 * err["uniform"][1]
+    assert err["thompson"][0] < -4 * err["thompson"][1]

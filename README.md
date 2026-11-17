@@ -1,8 +1,10 @@
-# Design of experiments: a knowledge graph of STAT 404 + modern variance reduction
+# Design of experiments: a knowledge graph of STAT 404 + modern online experimentation
 
 Notes and code for **STAT 404, Design and Analysis of Experiments** (UBC, course notes by W. J. Welch,
-version of August 2025), plus one folder that the notes do not cover: **ANCOVA, CUPED and CUPAC**, the
-covariate-adjustment methods behind modern online A/B testing.
+version of August 2025), plus two folders that the notes do not cover: **ANCOVA, CUPED and CUPAC**, the
+covariate-adjustment methods behind modern online A/B testing, and **multi-armed bandits** (the
+exploration/exploitation trade-off, epsilon-greedy and Thompson sampling) for experiments that adapt their
+allocation as data arrive.
 
 Every design or analysis method in the notes lives in exactly one topic folder. Each folder's README has the
 chapter sections it comes from, an explanation of every method in my own words (what it estimates, how the
@@ -44,6 +46,7 @@ flowchart LR
     end
     subgraph N["Beyond the notes"]
         VR["12 ANCOVA · CUPED · CUPAC<br/>covariate adjustment for A/B tests"]
+        MAB["13 Adaptive experiments<br/>explore vs exploit · ε-greedy · Thompson"]
     end
 
     BA -- "every test is estimate / SE" --> LM
@@ -66,6 +69,9 @@ flowchart LR
     LM -- "one more column" --> VR
     RBD -- "block at design vs adjust at analysis" --> VR
     SP -- "cluster-randomized A/B tests" --> VR
+    CRD -- "equal allocation = pure exploration" --> MAB
+    CM -- "known assignment probabilities" --> MAB
+    VR -- "fewer units: sharper units vs fewer bad arms" --- MAB
 
     click BA "basics-variance-and-standard-errors/" "Basics"
     click I "00-introduction-and-principles/" "Introduction"
@@ -81,6 +87,7 @@ flowchart LR
     click RE "10-random-effects/" "Random effects"
     click SP "11-split-plot-and-repeated-measures/" "Split-plot"
     click VR "12-variance-reduction-ancova-cuped-cupac/" "ANCOVA, CUPED, CUPAC"
+    click MAB "13-adaptive-experiments-bandits/" "Bandits"
 ```
 
 New to the statistics? Start with [Basics](basics-variance-and-standard-errors/): variance vs standard deviation
@@ -107,6 +114,7 @@ If the nodes are not clickable in your viewer (GitHub sometimes disables Mermaid
 | [10 Random effects](10-random-effects/) | 11 | fixed vs random, expected mean squares, variance components, prediction | [`random_effects.py`](10-random-effects/random_effects.py) |
 | [11 Split-plot and repeated measures](11-split-plot-and-repeated-measures/) | 12 | whole-plot and sub-plot factors, two error strata, repeated measures | [`split_plot.py`](11-split-plot-and-repeated-measures/split_plot.py) |
 | [12 ANCOVA, CUPED, CUPAC](12-variance-reduction-ancova-cuped-cupac/) | beyond the notes (10.6) | ANCOVA, Lin's estimator, CUPED, CUPAC with historical and cross-fitted models, cluster-robust SEs for cluster-randomized and session-level tests | [`ancova.py`](12-variance-reduction-ancova-cuped-cupac/ancova.py), [`cuped.py`](12-variance-reduction-ancova-cuped-cupac/cuped.py), [`cupac.py`](12-variance-reduction-ancova-cuped-cupac/cupac.py), [`cluster_randomized.py`](12-variance-reduction-ancova-cuped-cupac/cluster_randomized.py) |
+| [13 Adaptive experiments: bandits](13-adaptive-experiments-bandits/) | beyond the notes | exploration/exploitation trade-off, regret, epsilon-greedy (fixed and decaying), Thompson sampling, UCB1, bias and precision after adaptive allocation | [`bandits.py`](13-adaptive-experiments-bandits/bandits.py) |
 
 Chapter 13 of the notes holds exercise solutions and has no folder.
 
@@ -122,6 +130,9 @@ it costs*:
   hardly more than one.
 - **Runs** (06, 07): fractions and blocked designs give up effects you are willing to assume negligible
   (high-order interactions) in exchange for fewer runs or smaller blocks.
+- **Units given a worse treatment** (13): a fixed design keeps sending units to arms that are clearly losing;
+  a bandit shifts them to the leader as evidence comes in, at the cost of a less precise, biased final
+  comparison.
 - **Wrong error term** (10, 11): when randomization happens at two levels, there are two noise levels, and each
   comparison must be judged against its own.
 
@@ -146,11 +157,11 @@ Each folder lists its own gaps. Four themes recur often enough to plan study aro
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 python 05-two-level-factorials/two_level.py                 # any file runs on its own and prints its results
-python -m pytest -q                                          # 31 checks against statsmodels, scipy, enumeration and closed forms
+python -m pytest -q                                          # 34 checks against statsmodels, scipy, enumeration and closed forms
 ```
 
 Every script finishes in a few seconds on a laptop CPU except `robust_se.py` (~20 s), `cupac.py` (~25 s: it fits
-gradient-boosted trees) and `cluster_randomized.py` (~50 s). Results quoted in the topic READMEs come from these scripts with their fixed random seeds.
+gradient-boosted trees), `cluster_randomized.py` (~50 s) and `bandits.py` (~10 s). Results quoted in the topic READMEs come from these scripts with their fixed random seeds.
 
 ## Layout
 
@@ -170,6 +181,7 @@ gradient-boosted trees) and `cluster_randomized.py` (~50 s). Results quoted in t
 ├── 10-random-effects/
 ├── 11-split-plot-and-repeated-measures/
 ├── 12-variance-reduction-ancova-cuped-cupac/
+├── 13-adaptive-experiments-bandits/
 ├── tests/test_models.py                     correctness checks for every implementation
 └── requirements.txt
 ```
