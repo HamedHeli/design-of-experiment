@@ -195,3 +195,5 @@ The 5-fold cross-fitted model reaches the same corr² (0.77) without any histori
 - ← [03 Randomized blocks](../03-randomized-blocks-and-two-way/): blocking on a covariate at design time vs adjusting
   for it at analysis time.
 - ← [11 Split-plot](../11-split-plot-and-repeated-measures/): cluster-randomized A/B tests are split plots.
+- ↔ [13 Adaptive experiments](../13-adaptive-experiments-bandits/): the other way to spend fewer units on an
+  experiment, by sending fewer of them to arms that are losing.
